@@ -22,6 +22,9 @@ import java.time.ZonedDateTime;
 
 import org.springframework.core.convert.converter.Converter;
 
+/**
+ * 字符串转换时间转换器
+ */
 public class StringToZonedDateTimeConverter implements Converter<String, ZonedDateTime> {
 
 	@Override

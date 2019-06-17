@@ -49,17 +49,25 @@ public class FilteringWebHandler implements WebHandler {
 
 	protected static final Log logger = LogFactory.getLog(FilteringWebHandler.class);
 
+	// 全局过滤器
 	private final List<GatewayFilter> globalFilters;
 
 	public FilteringWebHandler(List<GlobalFilter> globalFilters) {
 		this.globalFilters = loadFilters(globalFilters);
 	}
 
+	/**
+	 * 包装全局过滤器
+	 * @param filters
+	 * @return
+	 */
 	private static List<GatewayFilter> loadFilters(List<GlobalFilter> filters) {
 		return filters.stream().map(filter -> {
+			// 包装成网关过滤器
 			GatewayFilterAdapter gatewayFilter = new GatewayFilterAdapter(filter);
 			if (filter instanceof Ordered) {
 				int order = ((Ordered) filter).getOrder();
+				// 包装成可排序网关过滤器
 				return new OrderedGatewayFilter(gatewayFilter, order);
 			}
 			return gatewayFilter;
@@ -73,18 +81,23 @@ public class FilteringWebHandler implements WebHandler {
 
 	@Override
 	public Mono<Void> handle(ServerWebExchange exchange) {
+		/**
+		 * 从header中获取路由信息
+		 * {@link RoutePredicateHandlerMapping#getHandlerInternal(ServerWebExchange)}
+		 * */
 		Route route = exchange.getRequiredAttribute(GATEWAY_ROUTE_ATTR);
+		// 获取网关过滤器
 		List<GatewayFilter> gatewayFilters = route.getFilters();
-
+		// 全局过滤器+路由配置的过滤器+网关过滤器
 		List<GatewayFilter> combined = new ArrayList<>(this.globalFilters);
 		combined.addAll(gatewayFilters);
-		// TODO: needed or cached?
+		// 根据Ordered排序
 		AnnotationAwareOrderComparator.sort(combined);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Sorted gatewayFilterFactories: " + combined);
 		}
-
+		// 创建过滤器链表进行链式调用
 		return new DefaultGatewayFilterChain(combined).filter(exchange);
 	}
 

@@ -43,6 +43,7 @@ import org.springframework.web.server.ServerWebExchange;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.toAsyncPredicate;
 
 /**
+ * 应用于URI路由的断言
  * Predicates that can be applies to a URI route.
  */
 public class PredicateSpec extends UriSpec {

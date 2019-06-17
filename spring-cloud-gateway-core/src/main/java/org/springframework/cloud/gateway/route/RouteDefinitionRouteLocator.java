@@ -52,6 +52,7 @@ import org.springframework.validation.Validator;
 import org.springframework.web.server.ServerWebExchange;
 
 /**
+ * 路由定位器
  * {@link RouteLocator} that loads routes from a {@link RouteDefinitionLocator}.
  *
  * @author Spencer Gibb
@@ -124,8 +125,8 @@ public class RouteDefinitionRouteLocator
 
 	@Override
 	public Flux<Route> getRoutes() {
-		return this.routeDefinitionLocator.getRouteDefinitions().map(this::convertToRoute)
-				// TODO: error handling
+		return this.routeDefinitionLocator.getRouteDefinitions().map(this::convertToRoute)//遍历转换成对应的Route
+				// TODO: error handling　
 				.map(route -> {
 					if (logger.isDebugEnabled()) {
 						logger.debug("RouteDefinition matched: " + route.getId());
@@ -140,17 +141,26 @@ public class RouteDefinitionRouteLocator
 	}
 
 	private Route convertToRoute(RouteDefinition routeDefinition) {
+		// 获取routeDefintion中的Predicate
 		AsyncPredicate<ServerWebExchange> predicate = combinePredicates(routeDefinition);
+		// 获取routeDefinition中的GatewayFilter
 		List<GatewayFilter> gatewayFilters = getFilters(routeDefinition);
-
+		// 构建路由信息
 		return Route.async(routeDefinition).asyncPredicate(predicate)
 				.replaceFilters(gatewayFilters).build();
 	}
 
+	/**
+	 * 加载过滤器
+	 * @param id 路由的ID
+	 * @param filterDefinitions 过滤器定义
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	private List<GatewayFilter> loadGatewayFilters(String id,
 			List<FilterDefinition> filterDefinitions) {
 		List<GatewayFilter> filters = filterDefinitions.stream().map(definition -> {
+			// 根据过滤器名称获取过滤器工厂
 			GatewayFilterFactory factory = this.gatewayFilterFactories
 					.get(definition.getName());
 			if (factory == null) {
@@ -173,13 +183,16 @@ public class RouteDefinitionRouteLocator
 					factory.shortcutFieldPrefix(), definition.getName(), validator,
 					conversionService);
 
+			// 通过过滤器工厂创建GatewayFilter
 			GatewayFilter gatewayFilter = factory.apply(configuration);
 			if (this.publisher != null) {
+				// 发布事件
 				this.publisher.publishEvent(new FilterArgsEvent(this, id, properties));
 			}
 			return gatewayFilter;
 		}).collect(Collectors.toList());
 
+		// 封装OrderedGatewayFilter
 		ArrayList<GatewayFilter> ordered = new ArrayList<>(filters.size());
 		for (int i = 0; i < filters.size(); i++) {
 			GatewayFilter gatewayFilter = filters.get(i);
@@ -197,13 +210,16 @@ public class RouteDefinitionRouteLocator
 	private List<GatewayFilter> getFilters(RouteDefinition routeDefinition) {
 		List<GatewayFilter> filters = new ArrayList<>();
 
+		// 校验gatewayProperties是否含有默认过滤器集
 		// TODO: support option to apply defaults after route specific filters?
 		if (!this.gatewayProperties.getDefaultFilters().isEmpty()) {
+			// 加载全局配置的默认过滤器集
 			filters.addAll(loadGatewayFilters(DEFAULT_FILTERS,
 					this.gatewayProperties.getDefaultFilters()));
 		}
 
 		if (!routeDefinition.getFilters().isEmpty()) {
+			// 加载自定义的过滤器集
 			filters.addAll(loadGatewayFilters(routeDefinition.getId(),
 					routeDefinition.getFilters()));
 		}
@@ -212,6 +228,11 @@ public class RouteDefinitionRouteLocator
 		return filters;
 	}
 
+	/**
+	 * 返回组合断言
+	 * @param routeDefinition
+	 * @return
+	 */
 	private AsyncPredicate<ServerWebExchange> combinePredicates(
 			RouteDefinition routeDefinition) {
 		List<PredicateDefinition> predicates = routeDefinition.getPredicates();

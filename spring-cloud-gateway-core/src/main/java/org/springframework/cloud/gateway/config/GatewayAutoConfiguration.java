@@ -143,10 +143,10 @@ import static org.springframework.cloud.gateway.config.HttpClientProperties.Pool
 @ConditionalOnProperty(name = "spring.cloud.gateway.enabled", matchIfMissing = true)
 @EnableConfigurationProperties
 @AutoConfigureBefore({ HttpHandlerAutoConfiguration.class,
-		WebFluxAutoConfiguration.class })
+		WebFluxAutoConfiguration.class }) //在指定的配置类初始化前加载
 @AutoConfigureAfter({ GatewayLoadBalancerClientAutoConfiguration.class,
-		GatewayClassPathWarningAutoConfiguration.class })
-@ConditionalOnClass(DispatcherHandler.class)
+		GatewayClassPathWarningAutoConfiguration.class }) //在指定的配置类初始化后再加载
+@ConditionalOnClass(DispatcherHandler.class) //classpath中存在该类时起效
 public class GatewayAutoConfiguration {
 
 	@Bean
@@ -154,26 +154,26 @@ public class GatewayAutoConfiguration {
 		return new StringToZonedDateTimeConverter();
 	}
 
-	@Bean
+	@Bean //路由定位构造器
 	public RouteLocatorBuilder routeLocatorBuilder(
 			ConfigurableApplicationContext context) {
 		return new RouteLocatorBuilder(context);
 	}
 
-	@Bean
-	@ConditionalOnMissingBean
+	@Bean //自定义路由 规则集
+	@ConditionalOnMissingBean //如果用户已创建了bean，则不再执行
 	public PropertiesRouteDefinitionLocator propertiesRouteDefinitionLocator(
 			GatewayProperties properties) {
 		return new PropertiesRouteDefinitionLocator(properties);
 	}
 
-	@Bean
+	@Bean //内存式自定义路由存储仓库
 	@ConditionalOnMissingBean(RouteDefinitionRepository.class)
 	public InMemoryRouteDefinitionRepository inMemoryRouteDefinitionRepository() {
 		return new InMemoryRouteDefinitionRepository();
 	}
 
-	@Bean
+	@Bean //合并路由规则集
 	@Primary
 	public RouteDefinitionLocator routeDefinitionLocator(
 			List<RouteDefinitionLocator> routeDefinitionLocators) {
@@ -199,6 +199,7 @@ public class GatewayAutoConfiguration {
 				new CompositeRouteLocator(Flux.fromIterable(routeLocators)));
 	}
 
+	//路由刷新监听器
 	@Bean
 	public RouteRefreshListener routeRefreshListener(
 			ApplicationEventPublisher publisher) {

@@ -20,6 +20,7 @@ import java.net.URI;
 
 import reactor.core.publisher.Mono;
 
+import org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping;
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.core.Ordered;
 import org.springframework.web.server.ServerWebExchange;
@@ -37,6 +38,7 @@ public class ForwardPathFilter implements GlobalFilter, Ordered {
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+		/**{@link RoutePredicateHandlerMapping#getHandlerInternal(ServerWebExchange)}*/
 		Route route = exchange.getAttribute(GATEWAY_ROUTE_ATTR);
 		URI routeUri = route.getUri();
 		String scheme = routeUri.getScheme();

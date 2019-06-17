@@ -31,6 +31,7 @@ public class CompositeRouteDefinitionLocator implements RouteDefinitionLocator {
 
 	@Override
 	public Flux<RouteDefinition> getRouteDefinitions() {
+		//因路由可以从配置文件和仓库中配置，所以需要合并，统一管理
 		return this.delegates.flatMap(RouteDefinitionLocator::getRouteDefinitions);
 	}
 

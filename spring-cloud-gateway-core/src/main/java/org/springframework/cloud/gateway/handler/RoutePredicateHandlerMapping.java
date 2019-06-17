@@ -56,6 +56,9 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 
 		this.managementPort = getPortProperty(environment, "management.server.");
 		this.managementPortType = getManagementPortType(environment);
+		// 设置排序字段1，此处的目的是Spring Cloud Gateway 的 GatewayWebfluxEndpoint 提供 HTTP API, 不需要经过网关
+		// 它通过 RequestMappingHandlerMapping 进行请求匹配处理。RequestMappingHandlerMapping 的 order = 0,
+		// 需要排在 RoutePredicateHandlerMapping 前面. RoutePredicateHandlerMapping 设置 order = 1
 		setOrder(1);
 		setCorsConfigurations(globalCorsProperties.getCorsConfigurations());
 	}
@@ -93,9 +96,14 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 								"Mapping [" + getExchangeDesc(exchange) + "] to " + r);
 					}
 
+					// 将路由信息put到headler中
 					exchange.getAttributes().put(GATEWAY_ROUTE_ATTR, r);
 					return Mono.just(webHandler);
 				}).switchIfEmpty(Mono.empty().then(Mono.fromRunnable(() -> {
+					/**
+					 * {@link FilteringWebHandler#handle(ServerWebExchange)}
+					 * 未找到, 一处header中 gatewayPredicateRouteAttr
+					 */
 					exchange.getAttributes().remove(GATEWAY_PREDICATE_ROUTE_ATTR);
 					if (logger.isTraceEnabled()) {
 						logger.trace("No RouteDefinition found for ["
@@ -125,6 +133,7 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 	}
 
 	protected Mono<Route> lookupRoute(ServerWebExchange exchange) {
+		// 通过路由定位器获取路由信息
 		return this.routeLocator.getRoutes()
 				// individually filter routes so that filterWhen error delaying is not a
 				// problem

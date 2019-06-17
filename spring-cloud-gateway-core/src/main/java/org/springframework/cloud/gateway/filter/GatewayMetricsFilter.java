@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import reactor.core.publisher.Mono;
 
+import org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping;
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
@@ -110,6 +111,7 @@ public class GatewayMetricsFilter implements GlobalFilter, Ordered {
 		}
 
 		// TODO refactor to allow Tags provider like in MetricsWebFilter
+		/**{@link RoutePredicateHandlerMapping#getHandlerInternal(ServerWebExchange)}*/
 		Route route = exchange.getAttribute(GATEWAY_ROUTE_ATTR);
 		Tags tags = Tags.of("outcome", outcome, "status", status, "httpStatusCode",
 				httpStatusCodeStr, "routeId", route.getId(), "routeUri",

@@ -28,15 +28,19 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 /**
+ * 路由定位器的包装类，实现了路由的本地缓存功能
  * @author Spencer Gibb
  */
 public class CachingRouteLocator
 		implements RouteLocator, ApplicationListener<RefreshRoutesEvent> {
 
+	// 目标路由定位器
 	private final RouteLocator delegate;
 
+	// 路由集合
 	private final Flux<Route> routes;
 
+	// 本地缓存, 用于缓存路由定位器获取的集合
 	private final Map<String, List> cache = new HashMap<>();
 
 	public CachingRouteLocator(RouteLocator delegate) {
@@ -70,4 +74,7 @@ public class CachingRouteLocator
 		refresh();
 	}
 
+	/**
+	 * 此类通过@EventListener(RefreshRoutesEvent.class)监听RefreshRoutesEvent事件实现了对缓存的动态刷新
+	 */
 }
