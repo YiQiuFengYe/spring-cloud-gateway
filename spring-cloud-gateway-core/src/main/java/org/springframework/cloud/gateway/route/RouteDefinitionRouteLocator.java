@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,7 +51,6 @@ import org.springframework.validation.Validator;
 import org.springframework.web.server.ServerWebExchange;
 
 /**
- * 路由定位器
  * {@link RouteLocator} that loads routes from a {@link RouteDefinitionLocator}.
  *
  * @author Spencer Gibb
@@ -125,8 +123,8 @@ public class RouteDefinitionRouteLocator
 
 	@Override
 	public Flux<Route> getRoutes() {
-		return this.routeDefinitionLocator.getRouteDefinitions().map(this::convertToRoute)//遍历转换成对应的Route
-				// TODO: error handling　
+		return this.routeDefinitionLocator.getRouteDefinitions().map(this::convertToRoute)
+				// TODO: error handling
 				.map(route -> {
 					if (logger.isDebugEnabled()) {
 						logger.debug("RouteDefinition matched: " + route.getId());
@@ -157,10 +155,11 @@ public class RouteDefinitionRouteLocator
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private List<GatewayFilter> loadGatewayFilters(String id,
+	List<GatewayFilter> loadGatewayFilters(String id,
 			List<FilterDefinition> filterDefinitions) {
-		List<GatewayFilter> filters = filterDefinitions.stream().map(definition -> {
-			// 根据过滤器名称获取过滤器工厂
+		ArrayList<GatewayFilter> ordered = new ArrayList<>(filterDefinitions.size());
+		for (int i = 0; i < filterDefinitions.size(); i++) {
+			FilterDefinition definition = filterDefinitions.get(i);
 			GatewayFilterFactory factory = this.gatewayFilterFactories
 					.get(definition.getName());
 			if (factory == null) {
@@ -180,22 +179,12 @@ public class RouteDefinitionRouteLocator
 			Object configuration = factory.newConfig();
 
 			ConfigurationUtils.bind(configuration, properties,
-					factory.shortcutFieldPrefix(), definition.getName(), validator,
-					conversionService);
+					factory.shortcutFieldPrefix(), definition.getName(), validator);
 
-			// 通过过滤器工厂创建GatewayFilter
 			GatewayFilter gatewayFilter = factory.apply(configuration);
 			if (this.publisher != null) {
-				// 发布事件
 				this.publisher.publishEvent(new FilterArgsEvent(this, id, properties));
 			}
-			return gatewayFilter;
-		}).collect(Collectors.toList());
-
-		// 封装OrderedGatewayFilter
-		ArrayList<GatewayFilter> ordered = new ArrayList<>(filters.size());
-		for (int i = 0; i < filters.size(); i++) {
-			GatewayFilter gatewayFilter = filters.get(i);
 			if (gatewayFilter instanceof Ordered) {
 				ordered.add(gatewayFilter);
 			}

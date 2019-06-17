@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.gateway.filter.factory;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +41,7 @@ import org.springframework.cloud.netflix.ribbon.StaticServerList;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
@@ -64,7 +66,8 @@ public class RetryGatewayFilterFactoryIntegrationTests extends BaseWebClientTest
 
 	@Test
 	public void retryFilterFailure() {
-		testClient.get().uri("/retryalwaysfail?key=getjavafailure&count=4")
+		testClient.mutate().responseTimeout(Duration.ofSeconds(10)).build()
+				.get().uri("/retryalwaysfail?key=getjavafailure&count=4")
 				.header(HttpHeaders.HOST, "www.retryjava.org").exchange().expectStatus()
 				.is5xxServerError().expectBody(String.class).consumeWith(result -> {
 					assertThat(result.getResponseBody()).contains("permanently broken");
@@ -79,11 +82,10 @@ public class RetryGatewayFilterFactoryIntegrationTests extends BaseWebClientTest
 	}
 
 	@Test
-	// TODO: support post
 	public void retryFilterPost() {
-		testClient.post().uri("/retry?key=post").exchange().expectStatus()
-				.is5xxServerError();
-		// .expectBody(String.class).isEqualTo("3");
+		testClient.post().uri("/retry?key=post")
+				.header(HttpHeaders.HOST, "www.retryjava.org").syncBody("Hello")
+				.exchange().expectStatus().isOk().expectBody(String.class).isEqualTo("3");
 	}
 
 	@Test
@@ -145,7 +147,8 @@ public class RetryGatewayFilterFactoryIntegrationTests extends BaseWebClientTest
 			return builder.routes()
 					.route("retry_java", r -> r.host("**.retryjava.org")
 							.filters(f -> f.prefixPath("/httpbin")
-									.retry(config -> config.setRetries(2)))
+									.retry(config -> config.setRetries(2)
+											.setMethods(HttpMethod.POST, HttpMethod.GET)))
 							.uri(uri))
 					.route("retry_with_loadbalancer",
 							r -> r.host("**.retrywithloadbalancer.org")
