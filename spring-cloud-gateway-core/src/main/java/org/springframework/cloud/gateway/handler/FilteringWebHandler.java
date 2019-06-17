@@ -38,6 +38,8 @@ import org.springframework.web.server.WebHandler;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR;
 
 /**
+ * 委托模式
+ * WebHandler委托给GlobalFilter执行, 然后返回
  * WebHandler that delegates to a chain of {@link GlobalFilter} instances and
  * {@link GatewayFilterFactory} instances then to the target {@link WebHandler}.
  *
@@ -101,10 +103,16 @@ public class FilteringWebHandler implements WebHandler {
 		return new DefaultGatewayFilterChain(combined).filter(exchange);
 	}
 
+	/**
+	 * 默认网关过滤器链实现
+	 *
+	 */
 	private static class DefaultGatewayFilterChain implements GatewayFilterChain {
 
+		// 当前过滤器在集合中索引
 		private final int index;
 
+		// 过滤器集合
 		private final List<GatewayFilter> filters;
 
 		DefaultGatewayFilterChain(List<GatewayFilter> filters) {
@@ -112,6 +120,11 @@ public class FilteringWebHandler implements WebHandler {
 			this.index = 0;
 		}
 
+		/**
+		 * 构建当前执行的过滤器链
+		 * @param parent 上个过滤器链
+		 * @param index 当前过滤器的索引
+		 */
 		private DefaultGatewayFilterChain(DefaultGatewayFilterChain parent, int index) {
 			this.filters = parent.getFilters();
 			this.index = index;
@@ -128,9 +141,11 @@ public class FilteringWebHandler implements WebHandler {
 					GatewayFilter filter = filters.get(this.index);
 					DefaultGatewayFilterChain chain = new DefaultGatewayFilterChain(this,
 							this.index + 1);
+					// 执行过滤器filter
 					return filter.filter(exchange, chain);
 				}
 				else {
+					// 执行完成
 					return Mono.empty(); // complete
 				}
 			});
